@@ -1,8 +1,12 @@
-<div class="flex px-16 py-4">
+<div class="flex items-center px-8 lg:px-16 py-4">
   <a class="flex gap-1 items-center" routerLink="/">
     <img src="favicon-16x16.png" />
     <h1 class="font-bold text-lg">AniWeek</h1>
   </a>
+  <div class="grow"></div>
+  <nav class="flex items-center gap-2 text-xs h-full text-center">
+    <a href="https://github.com/Guaxinim5573/aniweek">Github</a>
+  </nav>
   <div class="grow"></div>
   @let profile = anilist.userProfile();
   @if (profile) {
