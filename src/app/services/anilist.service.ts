@@ -142,7 +142,7 @@ export class AnilistService {
     `, {})
   }
 
-  getLists() {
+  getLists(id: number) {
     return defer(() => {
       return this.request<{
         data: {
@@ -203,7 +203,7 @@ export class AnilistService {
             }
           }
         }
-      `, { id: 6225948, type: "ANIME"})
+      `, { id, type: "ANIME"})
     })
   }
 
@@ -215,7 +215,7 @@ export class AnilistService {
     return defer(() => {
       const profile = this.userProfile()
       if(!profile) return throwError(() => new Error("Couldn't get profile"))
-      return this.getLists().pipe(
+      return this.getLists(profile.id).pipe(
         map((result) => result.data.MediaListCollection.lists),
         map((lists) => {
           const currentList = lists.find((l) => l.status === "CURRENT")
