@@ -1,0 +1,69 @@
+<div class="flex px-16 py-4">
+  <a class="flex gap-1 items-center" routerLink="/">
+    <img src="favicon-16x16.png" />
+    <h1 class="font-bold text-lg">AniWeek</h1>
+  </a>
+  <div class="grow"></div>
+  @let profile = anilist.userProfile();
+  @if (profile) {
+    <a [href]="profile.siteUrl" target="_blank">
+      <img alt="your profile" [src]="profile.avatar.medium" class="h-10 rounded-sm">
+    </a>
+  } @else {
+    <a [href]="authorizationUrl">Log In</a>
+  }
+</div>
+@if(authorized()) {
+  <div class="flex flex-col mt-6 mx-2 gap-4">
+    <h2 class="font-bold text-2xl">Anime Schedule</h2>
+    <div class="flex flex-wrap">
+      @let list = watchingList();
+      @for(day of days; track day) {
+        <div class="w-64">
+          <div class="flex items-baseline gap-1" [ngClass]="{
+            'text-ctp-mauve': day === today
+          }">
+            <span class="font-bold text-2xl">{{ daysName[day] }}</span>
+            <span class="text-sm">{{ getDayDate(day) }}</span>
+          </div>
+          <div class="flex flex-col gap-2">
+            @if(list === null) {
+              <div class="flex gap-1 animate-pulse">
+                <div class="w-14 h-20 bg-ctp-text/50 rounded-sm"></div>
+                <div class="flex flex-col w-48 py-2 gap-1">
+                  <div class="w-40 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                  <div class="w-36 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                  <div class="w-20 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                </div>
+              </div>
+            } @else {
+              @for(anime of watchingList()![day]; track anime.id) {
+                <div class="flex gap-1">
+                  <img width="56" height="80" class="rounded-sm" [src]="anime.coverImage.small" />
+                  <div class="flex flex-col w-48 py-1">
+                    <a [href]="anime.siteUrl" target="_blank" class="w-full font-medium line-clamp-2">{{ anime.title.userPreferred }}</a>
+                    <span class="flex items-center gap-1">
+                      <span>EP{{ anime.nextAiringEpisode.episode }}</span>
+                      <ng-icon name="heroClock" />
+                      <span>{{ getTimeString(anime.nextAiringEpisode.airingAt) }}</span>
+                    </span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="grid place-items-center w-full grow text-center">
+    <div class="flex flex-col">
+      <span class="text-2xl font-bold">Welcome</span>
+      <span>Login to see which anime you're watching is airing over the week!</span>
+      <a class="bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-sm px-4 py-2.5 focus:outline-none text-center" [href]="authorizationUrl">
+        Log In
+      </a>
+    </div>
+  </div>
+}

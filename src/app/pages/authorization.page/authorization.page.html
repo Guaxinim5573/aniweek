@@ -1,0 +1,13 @@
+<div class="grid place-items-center h-screen w-screen">
+  @let err = error();
+  @if(err) {
+    <div class="flex flex-col text-center">
+      <span class="font-medium text-4xl my-2">I'm really sorry!! x-x</span>
+      <span>Some error ocurred while trying to log in.</span>
+      <span class="text-ctp-red">Error: {{ err }}</span>
+      <a class="underline" routerLink="/">Return to homepage</a>
+    </div>
+  } @else {
+    <span class="font-medium text-2xl">Authorizing...</span>
+  }
+</div>

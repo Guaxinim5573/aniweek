@@ -1,0 +1,1 @@
+export const ANILIST_APP_ID = 35443
