@@ -1,7 +1,7 @@
 # AniWeek
 > View the airing day for the weekly anime YOU are watching! 🌸 Direcly from you [AniList](https://anilist.co/) profile!
 
-![ALT](https://i.imgur.com/98Wvblf.png)
+![ALT](https://i.imgur.com/hzLj9Wh.png)
 
 Visit https://aniweek.guaxinim.online/
 
