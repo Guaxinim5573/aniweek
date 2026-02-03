@@ -1,73 +1,134 @@
-<div class="flex items-center px-8 lg:px-16 py-4">
-  <a class="flex gap-1 items-center" routerLink="/">
-    <img src="favicon-16x16.png" />
-    <h1 class="font-bold text-lg">AniWeek</h1>
-  </a>
-  <div class="grow"></div>
-  <nav class="flex items-center gap-2 text-xs h-full text-center">
-    <a href="https://github.com/Guaxinim5573/aniweek">Github</a>
-  </nav>
-  <div class="grow"></div>
-  @let profile = anilist.userProfile();
-  @if (profile) {
-    <a [href]="profile.siteUrl" target="_blank">
-      <img alt="your profile" [src]="profile.avatar.medium" class="h-10 rounded-sm">
-    </a>
-  } @else {
-    <a [href]="authorizationUrl">Log In</a>
-  }
-</div>
-@if(authorized()) {
-  <div class="flex flex-col mt-6 mx-2 gap-4">
-    <h2 class="font-bold text-2xl">Anime Schedule</h2>
-    <div class="flex flex-wrap">
-      @let list = watchingList();
-      @for(day of days; track day) {
-        <div class="w-64">
-          <div class="flex items-baseline gap-1" [ngClass]="{
-            'text-ctp-mauve': day === today
-          }">
-            <span class="font-bold text-2xl">{{ daysName[day] }}</span>
-            <span class="text-sm">{{ getDayDate(day) }}</span>
+<div class="flex flex-col min-h-dvh">
+  @let bannerImage = profile()?.bannerImage;
+  <div class="flex flex-col w-full bg-cover bg-center relative" [style.background-image]="bannerImage ? 'url(' + bannerImage + ')' : ''">
+    @if(bannerImage) {
+      <div class="absolute inset-0 bg-linear-to-b from-black/10 to-black/70"></div>
+    }
+    <div class="relative flex items-center bg-linear-to-b from-ctp-base/50 to-ctp-base/25 bg-ctp-base/40 px-8 lg:px-16 py-4 z-10">
+      <div class="flex flex-col items-center">
+        <a class="flex gap-1 items-center" routerLink="/">
+          <img src="favicon-16x16.png" />
+          <h1 class="font-bold text-lg">AniWeek</h1>
+        </a>
+        <span class="text-xs">Data from <a class="underline" href="https://anilist.co/" target="_blank">AniList</a></span>
+      </div>
+      <div class="ml-auto">
+        @let authorizedUserProfile = anilist.userProfile();
+        @if (authorizedUserProfile) {
+          <a [href]="profileURL(authorizedUserProfile.name)" target="_blank">
+            <img alt="your profile" [src]="authorizedUserProfile.avatar.medium" class="h-10 rounded-sm">
+          </a>
+        } @else {
+          <a [href]="authorizationUrl">Log In</a>
+        }
+      </div>
+    </div>
+    <div class="flex flex-col mt-6 mb-8 mx-2 gap-4 z-10">
+      @if (profile()) {
+        <a [href]="profileURL(profile()?.name || '')" target="_blank" class="flex flex-col items-center mx-auto gap-2">
+          <img alt="user avatar" [src]="profile()?.avatar?.medium" class="h-24 rounded-lg">
+          <h2 class="font-bold text-shadow-gray-900">{{ profile()?.name }}'s Anime Week</h2>
+        </a>
+        @if (isSelf()) {
+          <div class="flex flex-col items-center">
+            <button class="flex gap-2 cursor-pointer items-center bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-md px-4 py-2.5 focus:outline-none" (click)="shareProfile()">
+              <ng-icon name="heroShare" class="size-5!" />
+              <span>Share</span>
+            </button>
+            <span class="font-medium text-ctp-green">{{ shareStatus() || "&nbsp;" }}</span>
           </div>
-          <div class="flex flex-col gap-2">
-            @if(list === null) {
-              <div class="flex gap-1 animate-pulse">
-                <div class="w-14 h-20 bg-ctp-text/50 rounded-sm"></div>
-                <div class="flex flex-col w-48 py-2 gap-1">
-                  <div class="w-40 h-2.5 bg-ctp-text/50 rounded-sm"></div>
-                  <div class="w-36 h-2.5 bg-ctp-text/50 rounded-sm"></div>
-                  <div class="w-20 h-2.5 bg-ctp-text/50 rounded-sm"></div>
-                </div>
-              </div>
-            } @else {
-              @for(anime of watchingList()![day]; track anime.id) {
-                <div class="flex gap-1">
-                  <img width="56" height="80" class="rounded-sm" [src]="anime.coverImage.small" />
-                  <div class="flex flex-col w-48 py-1">
-                    <a [href]="anime.siteUrl" target="_blank" class="w-full font-medium line-clamp-2">{{ anime.title.userPreferred }}</a>
-                    <span class="flex items-center gap-1">
-                      <span>EP{{ anime.nextAiringEpisode.episode }}</span>
-                      <ng-icon name="heroClock" />
-                      <span>{{ getTimeString(anime.nextAiringEpisode.airingAt) }}</span>
-                    </span>
-                  </div>
-                </div>
-              }
-            }
-          </div>
-        </div>
+        } @else if (bannerImage) {
+          <div class="h-16"></div>
+        }
       }
     </div>
   </div>
-} @else {
-  <div class="grid place-items-center w-full grow text-center">
-    <div class="flex flex-col">
-      <span class="text-2xl font-bold">Welcome</span>
-      <span>Login to see which anime you're watching is airing over the week!</span>
-      <a class="bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-sm px-4 py-2.5 focus:outline-none text-center" [href]="authorizationUrl">
+  @if (!isSelf() || authorized()) {
+    <div class="flex flex-col mt-6 mx-2 gap-4">
+      <div class="flex flex-wrap">
+        @let list = watchingList();
+        @for(day of days; track day) {
+          <div class="w-64">
+            <div class="flex items-baseline gap-1" [ngClass]="{
+              'text-ctp-mauve': day === today
+            }">
+              <span class="font-bold text-2xl">{{ daysName[day] }}</span>
+              <span class="text-sm">{{ getDayDate(day) }}</span>
+            </div>
+            <div class="flex flex-col gap-2">
+              @if(list === null) {
+                <div class="flex gap-1 animate-pulse">
+                  <div class="w-14 h-20 bg-ctp-text/50 rounded-sm"></div>
+                  <div class="flex flex-col w-48 py-2 gap-1">
+                    <div class="w-40 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                    <div class="w-36 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                    <div class="w-20 h-2.5 bg-ctp-text/50 rounded-sm"></div>
+                  </div>
+                </div>
+              } @else {
+                @for(anime of watchingList()![day]; track anime.id) {
+                  <div class="flex gap-1">
+                    <img width="56" height="80" class="rounded-sm" [src]="anime.coverImage.small" />
+                    <div class="flex flex-col w-48 py-1">
+                      <a [href]="anime.siteUrl" target="_blank" class="w-full font-medium line-clamp-2">{{ anime.title.userPreferred }}</a>
+                      <span class="flex items-center gap-1">
+                        <span>EP{{ anime.nextAiringEpisode.episode }}</span>
+                        <ng-icon name="heroClock" />
+                        <span>{{ getTimeString(anime.nextAiringEpisode.airingAt) }}</span>
+                      </span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="grid place-items-center left-1/2 -translate-x-1/2 top-1/2 absolute text-center">
+      <div class="flex flex-col">
+        <span class="text-2xl font-bold">Welcome</span>
+        <span>Login to see which anime you're watching is airing over the week!</span>
+        <a class="bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-sm px-4 py-2.5 focus:outline-none text-center" [href]="authorizationUrl">
+          Log In
+        </a>
+        <span class="text-xs mt-1">All data is processed on your browser. Nothing is sent to a server.</span>
+      </div>
+    </div>
+  }
+</div>
+@if (!isSelf()) {
+  <div class="w-full flex flex-col items-center gap-2">
+    @if (authorized()) {
+      <a class="bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-sm px-4 py-2.5 focus:outline-none text-center" routerLink="/">
+        See you own list
+      </a>
+    } @else {
+      <span class="text-2xl font-bold">Wanna see your list?</span>
+      <a class="bg-ctp-blue text-ctp-crust border border-transparent shadow-xs font-medium leading-5 rounded-sm text-sm px-4 py-2.5 focus:outline-none text-center" routerLink="/">
         Log In
       </a>
-    </div>
+    }
   </div>
 }
+<footer class="relative w-full bg-linear-to-b from-ctp-base/50 to-ctp-base/25 bg-ctp-base/40">
+  <div class="flex items-center py-4 px-8 lg:px-16">
+    <a class="flex gap-1 items-center" routerLink="/">
+      <img src="favicon-16x16.png" />
+      <h1 class="font-bold text-lg">AniWeek</h1>
+    </a>
+    <ul class="ml-auto flex gap-2 items-center text-sm font-medium">
+      <li>
+        <a href="https://anilist.co/user/Guaxinim5573" target="_blank">
+          <svg fill="currentColor" class="size-5" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg"><path d="M6.361 2.943 0 21.056h4.942l1.077-3.133H11.4l1.052 3.133H22.9c.71 0 1.1-.392 1.1-1.101V17.53c0-.71-.39-1.101-1.1-1.101h-6.483V4.045c0-.71-.392-1.102-1.101-1.102h-2.422c-.71 0-1.101.392-1.101 1.102v1.064l-.758-2.166zm2.324 5.948 1.688 5.018H7.144z"/></svg>
+        </a>
+      </li>
+      <li>
+        <a href="https://github.com/Guaxinim5573/aniweek" target="_blank">
+          <svg class="size-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.006 2a9.847 9.847 0 0 0-6.484 2.44 10.32 10.32 0 0 0-3.393 6.17 10.48 10.48 0 0 0 1.317 6.955 10.045 10.045 0 0 0 5.4 4.418c.504.095.683-.223.683-.494 0-.245-.01-1.052-.014-1.908-2.78.62-3.366-1.21-3.366-1.21a2.711 2.711 0 0 0-1.11-1.5c-.907-.637.07-.621.07-.621.317.044.62.163.885.346.266.183.487.426.647.71.135.253.318.476.538.655a2.079 2.079 0 0 0 2.37.196c.045-.52.27-1.006.635-1.37-2.219-.259-4.554-1.138-4.554-5.07a4.022 4.022 0 0 1 1.031-2.75 3.77 3.77 0 0 1 .096-2.713s.839-.275 2.749 1.05a9.26 9.26 0 0 1 5.004 0c1.906-1.325 2.74-1.05 2.74-1.05.37.858.406 1.828.101 2.713a4.017 4.017 0 0 1 1.029 2.75c0 3.939-2.339 4.805-4.564 5.058a2.471 2.471 0 0 1 .679 1.897c0 1.372-.012 2.477-.012 2.814 0 .272.18.592.687.492a10.05 10.05 0 0 0 5.388-4.421 10.473 10.473 0 0 0 1.313-6.948 10.32 10.32 0 0 0-3.39-6.165A9.847 9.847 0 0 0 12.007 2Z" clip-rule="evenodd"/></svg>
+        </a>
+      </li>
+    </ul>
+  </div>
+</footer>

@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { defer, from, map, tap, throwError } from 'rxjs';
+import { defer, from, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
-export interface AuthorizedUser {
+export interface UserProfile {
   avatar: {
     large: string
     medium: string
@@ -10,6 +10,7 @@ export interface AuthorizedUser {
   id: number
   name: string
   siteUrl: string
+  bannerImage: string | null
 }
 
 export interface EntryDate {
@@ -69,9 +70,8 @@ export interface AnimeList {
 })
 export class AnilistService {
   private readonly http = inject(HttpClient)
-  readonly userProfile = signal<AuthorizedUser | null | undefined>(undefined)
+  readonly userProfile = signal<UserProfile | null | undefined>(undefined)
   readonly authorized = signal(false)
-
   readonly token = signal<string | null>(null)
 
   constructor() {
@@ -96,15 +96,15 @@ export class AnilistService {
   }
 
   private request<T>(query: string, variables: Record<string, unknown>) {
+    const token = this.token()
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    }
+    if(token) headers["Authorization"] = `Bearer ${token}`
     return this.http.post<T>("https://graphql.anilist.co/", JSON.stringify({
       query, variables
-    }), {
-      headers: {
-        Authorization: `Bearer ${this.token()}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      }
-    })
+    }), { headers })
   }
 
   authorize(token: string, expiresIn: number) {
@@ -128,7 +128,7 @@ export class AnilistService {
   getAuthorizedUser() {
     return this.request<{
       data: {
-        Viewer: AuthorizedUser
+        Viewer: UserProfile
       }
     }>(`
       query {
@@ -136,13 +136,23 @@ export class AnilistService {
           id
           name
           siteUrl
+          bannerImage
           avatar { large medium }
         }
       }
     `, {})
   }
 
-  getLists(id: number) {
+  getLists(id: number | string) {
+    const [queryParams, mediaParams] = typeof id === "number"
+      ? [
+        "($id: Int, $type: MediaType)",
+        "(userId: $id, type: $type)"
+      ]
+      : [
+        "($name: String, $type: MediaType)",
+        "(userName: $name, type: $type)"
+      ]
     return defer(() => {
       return this.request<{
         data: {
@@ -151,8 +161,8 @@ export class AnilistService {
           }
         }
       }>(`
-        query ($id: Int, $type: MediaType) {
-          MediaListCollection(userId: $id, type: $type) {
+        query ${queryParams} {
+          MediaListCollection${mediaParams} {
             lists {
               name
               status
@@ -203,20 +213,59 @@ export class AnilistService {
             }
           }
         }
-      `, { id, type: "ANIME"})
+      `, {
+        [typeof id === "number" ? "id" : "name"]: id,
+        type: "ANIME"
+      })
     })
+  }
+
+  getUserProfile(id: number | string) {
+    const [queryParams, userParams] = typeof id === "number"
+      ? [
+        "($id: Int)",
+        "(id: $id)"
+      ]
+      : [
+        "($name: String)",
+        "(name: $name)"
+      ]
+    return this.request<{
+      data: {
+        User: UserProfile
+      }
+    }>(`
+      query ${queryParams} {
+        User ${userParams} {
+          id
+          name
+          siteUrl
+          bannerImage
+          avatar { large medium }
+        }
+      }
+    `.trim(), { [typeof id === "number" ? "id" : "name"]: id }).pipe(
+      map((response) => response.data.User)
+    )
   }
 
   /**
    * Returns only the anime entries on list CURRENT
    * @note Fails if there's no token
+   * @param user User to get list. Self to get list of authorized user
    */
-  getWatchingList() {
+  getWatchingList(user: number | string | "self" = "self") {
     return defer(() => {
-      const profile = this.userProfile()
-      if(!profile) return throwError(() => new Error("Couldn't get profile"))
-      return this.getLists(profile.id).pipe(
-        map((result) => result.data.MediaListCollection.lists),
+      const profile: Observable<UserProfile> = user === "self"
+        ? defer(() => {
+          const p = this.userProfile()
+          if(p) return of(p)
+          else return throwError(() => new Error("Couldn't get own profile"))
+        })
+        : this.getUserProfile(user)
+      return profile.pipe(
+        switchMap((profile) => this.getLists(profile.id)),
+        map((response) => response.data.MediaListCollection.lists),
         map((lists) => {
           const currentList = lists.find((l) => l.status === "CURRENT")
           if(!currentList) throw new Error("Couldn't find CURRENT list")

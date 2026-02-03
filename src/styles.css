@@ -2,5 +2,5 @@
 @import "@catppuccin/tailwindcss/mocha.css";
 
 .page {
-  @apply flex flex-col w-full h-full grow;
+  @apply flex flex-col w-full h-full;
 }

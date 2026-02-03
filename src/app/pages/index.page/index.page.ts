@@ -1,11 +1,11 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ANILIST_APP_ID } from '../../constants';
 import { AnilistService, AnimeMedia } from '../../services/anilist.service';
 import { toObservable, toSignal } from "@angular/core/rxjs-interop"
-import { filter, map, switchMap } from 'rxjs';
+import { filter, from, map, switchMap } from 'rxjs';
 import { NgClass } from "@angular/common"
 import { NgIcon } from '@ng-icons/core';
-import { RouterLink } from "@angular/router";
+import { ActivatedRoute, RouterLink } from "@angular/router";
 
 @Component({
   selector: 'app-index.page',
@@ -15,13 +15,28 @@ import { RouterLink } from "@angular/router";
 })
 export class IndexPage {
   readonly anilist = inject(AnilistService)
+  readonly activatedRoute = inject(ActivatedRoute)
   readonly authorizationUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${ANILIST_APP_ID}&response_type=token`
 
   readonly authorized = this.anilist.authorized
+  readonly isSelf = toSignal(this.activatedRoute.params.pipe(
+    map((params) => {
+      if("user" in params) return false
+      else return true
+    })
+  ))
+  readonly profile$ = this.activatedRoute.params.pipe(
+    switchMap((params) => {
+      if("user" in params) {
+        return this.anilist.getUserProfile(params["user"])
+      } else return toObservable(this.anilist.userProfile)
+    })
+  )
+  readonly profile = toSignal(this.profile$)
   readonly watchingList = toSignal(
-    toObservable(this.anilist.userProfile).pipe(
+    this.profile$.pipe(
       filter((profile) => !!profile),
-      switchMap((profile) => this.anilist.getWatchingList()),
+      switchMap((profile) => this.anilist.getWatchingList(profile.id)),
       map((entries) => entries
         .filter((entry) => entry.media.nextAiringEpisode && (entry.media.nextAiringEpisode.airingAt * 1000) < Date.now() + (7 * 86400000))
         .map((entry) => ({
@@ -69,5 +84,19 @@ export class IndexPage {
     timestamp = timestamp * 1000
     const date = new Date(timestamp)
     return date.toLocaleTimeString("pt-BR", { timeStyle: "short" })
+  }
+
+  profileURL(name: string) {
+    return `https://anilist.co/user/${name}`
+  }
+
+  readonly shareStatus = signal("")
+  shareProfile() {
+    const profile = this.profile()
+    if(profile && navigator.clipboard) {
+      from(navigator.clipboard.writeText(`https://aniweek.guaxinim.online/user/${profile.name}`)).subscribe(() => {
+        this.shareStatus.set("URL copied to clipboard")
+      })
+    }
   }
 }

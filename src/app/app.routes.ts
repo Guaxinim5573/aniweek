@@ -8,6 +8,10 @@ export const routes: Routes = [
     pathMatch: "full",
     component: IndexPage
   },
+  {
+    path: "user/:user",
+    component: IndexPage
+  },
   { path: "anilist/callback", component: AuthorizationPage }
 ];
 
